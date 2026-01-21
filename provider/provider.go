@@ -109,6 +109,8 @@ func (p *RabbitmqProvider) DataSources(ctx context.Context) []func() datasource.
 func (p *RabbitmqProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewRabbitmqUserResource,
+		NewRabbitmqPermissionsResource,
+		NewRabbitmqTopicPermissionsResource,
 	}
 }
 

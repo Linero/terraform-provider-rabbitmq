@@ -1,12 +1,12 @@
 ---
 page_title: "Rabbitmq Provider"
 description: |-
-  The rabbitmq provider allows managing rabbitmq users.
+  The rabbitmq provider allows managing rabbitmq users, permissions and topic permissions.
 ---
 
 # Rabbitmq Provider
 
-The Rabbitmq provider provides resources to interact with a Rabbitmq server, specifically for managing users.
+The Rabbitmq provider provides resources to interact with a Rabbitmq server, specifically for managing users, permissions and topic permissions.
 
 ## Example Usage
 

@@ -1,6 +1,6 @@
 # Rabbitmq Provider
 
-The Rabbitmq provider provides resources to interact with a Rabbitmq server, specifically for managing users.
+The Rabbitmq provider provides resources to interact with a Rabbitmq server, specifically for managing users, permissions and topic permissions.
 
 ## Example Usage
 
@@ -18,6 +18,22 @@ resource "rabbitmq_user" "test" {
   tags = [
     "administrator"
   ]
+}
+
+resource "rabbitmq_permissions" "test" {
+  user      = "guest"
+  vhost     = "/"
+  configure = ".*"
+  write     = ".*"
+  read      = ".*"
+}
+
+resource "rabbitmq_topic_permissions" "test" {
+  user     = "guest"
+  vhost    = "/"
+  exchange = "amq.topic"
+  write    = ".*"
+  read     = ".*"
 }
 ```
 
