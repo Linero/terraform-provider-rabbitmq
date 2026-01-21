@@ -21,7 +21,7 @@ resource "rabbitmq_user" "test" {
 }
 
 resource "rabbitmq_permissions" "test" {
-  user      = "guest"
+  user      = "test"
   vhost     = "/"
   configure = ".*"
   write     = ".*"
@@ -29,7 +29,7 @@ resource "rabbitmq_permissions" "test" {
 }
 
 resource "rabbitmq_topic_permissions" "test" {
-  user     = "guest"
+  user     = "test"
   vhost    = "/"
   exchange = "amq.topic"
   write    = ".*"

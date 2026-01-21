@@ -1,5 +1,5 @@
 resource "rabbitmq_permissions" "test" {
-  user      = "guest"
+  user      = "test"
   vhost     = "/"
   configure = ".*"
   write     = ".*"

@@ -12,7 +12,7 @@ Resource to create and manage RabbitMQ topic permissions for a user.
 
 ```terraform
 resource "rabbitmq_topic_permissions" "test" {
-  user     = "guest"
+  user     = "test"
   vhost    = "/"
   exchange = "amq.topic"
   write    = ".*"
