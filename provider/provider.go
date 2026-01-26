@@ -111,6 +111,8 @@ func (p *RabbitmqProvider) Resources(ctx context.Context) []func() resource.Reso
 		NewRabbitmqUserResource,
 		NewRabbitmqPermissionsResource,
 		NewRabbitmqTopicPermissionsResource,
+		NewRabbitmqVhostResource,
+		NewRabbitmqExchangeResource,
 	}
 }
 

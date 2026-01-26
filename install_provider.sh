@@ -2,7 +2,9 @@
 set -euo pipefail
 
 if git describe --tags >/dev/null 2>&1; then
-    VERSION="$(git describe --tags --dirty)"
+    tag="$(git describe --tags --dirty)"
+    ver=${tag#v}
+    VERSION="$ver"
 else
     VERSION="0.0.0-dev"
 fi
