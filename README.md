@@ -32,14 +32,25 @@ resource "rabbitmq_topic_permissions" "test" {
   user     = "test"
   vhost    = "/"
   exchange = "amq.topic"
-  write    = ".*"
-  read     = ".*"
-}
-```
-
-## Schema
-
-### Required
+    write     = ".*"
+    read      = ".*"
+  }
+  
+  resource "rabbitmq_exchange" "test" {
+    name  = "test-exchange"
+    vhost = "/"
+    settings {
+      type        = "direct"
+      durable     = false
+      auto_delete = false
+    }
+  }
+  ```
+  
+  ## Schema
+  
+  ### Required
+  
 
 - `address` (String) The address of the Rabbitmq server (e.g., `http://localhost:15672`).
 - `username` (String, Sensitive) The username for the Rabbitmq user.
