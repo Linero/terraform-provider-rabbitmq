@@ -6,9 +6,11 @@ import (
 
 	rabbithole "github.com/michaelklishin/rabbit-hole/v3"
 
+	"github.com/hashicorp/terraform-plugin-framework/attr"
 	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema/listplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/stringplanmodifier"
 	"github.com/hashicorp/terraform-plugin-framework/types"
@@ -31,8 +33,7 @@ type RabbitmqVhostResourceModel struct {
 	Description      types.String `tfsdk:"description"`
 	DefaultQueueType types.String `tfsdk:"default_queue_type"`
 	Tracing          types.Bool   `tfsdk:"tracing"`
-	MaxConnections   types.String `tfsdk:"max_connections"`
-	MaxQueues        types.String `tfsdk:"max_queues"`
+	Tags             types.List   `tfsdk:"tags"`
 }
 
 func (r *RabbitmqVhostResource) Configure(ctx context.Context, req resource.ConfigureRequest, resp *resource.ConfigureResponse) {
@@ -59,25 +60,26 @@ func (r *RabbitmqVhostResource) Schema(ctx context.Context, req resource.SchemaR
 			"description": schema.StringAttribute{
 				Optional:    true,
 				Description: "The description of the vhost.",
-				PlanModifiers: []planmodifier.String{
-					stringplanmodifier.RequiresReplace(),
-				},
 			},
 			"default_queue_type": schema.StringAttribute{
 				Optional:    true,
 				Description: "The default queue type for the vhost.",
+				PlanModifiers: []planmodifier.String{
+					stringplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"tracing": schema.BoolAttribute{
 				Optional:    true,
+				Computed:    true,
 				Description: "The tracing setting for the vhost.",
 			},
-			"max_connections": schema.StringAttribute{
+			"tags": schema.ListAttribute{
 				Optional:    true,
-				Description: "The max connections for the vhost.",
-			},
-			"max_queues": schema.StringAttribute{
-				Optional:    true,
-				Description: "The max queues for the vhost.",
+				Description: "Tags associated with the vhost.",
+				ElementType: types.StringType,
+				PlanModifiers: []planmodifier.List{
+					listplanmodifier.UseStateForUnknown(),
+				},
 			},
 			"id": schema.StringAttribute{
 				Computed: true,
@@ -108,7 +110,17 @@ func (r *RabbitmqVhostResource) Create(ctx context.Context, req resource.CreateR
 	})
 
 	rmqc := r.providerData.rabbitmqClient
-	response, err := rmqc.PutVhost(name, rabbithole.VhostSettings{})
+	tags := []string{}
+	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
+		plan.Tags.ElementsAs(ctx, &tags, false)
+	}
+	settings := rabbithole.VhostSettings{
+		Description:      plan.Description.ValueString(),
+		DefaultQueueType: plan.DefaultQueueType.ValueString(),
+		Tracing:          plan.Tracing.ValueBool(),
+		Tags:             tags,
+	}
+	response, err := rmqc.PutVhost(name, settings)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating RabbitMQ vhost",
@@ -170,12 +182,72 @@ func (r *RabbitmqVhostResource) Read(ctx context.Context, req resource.ReadReque
 	}
 
 	state.Name = types.StringValue(vhost.Name)
+	state.Description = types.StringValue(vhost.Description)
+
+	if !state.DefaultQueueType.IsNull() {
+		state.DefaultQueueType = types.StringValue(vhost.DefaultQueueType)
+	} else {
+		state.DefaultQueueType = types.StringNull()
+	}
+
+	state.Tracing = types.BoolValue(vhost.Tracing)
+	if vhost.Tags == nil {
+		state.Tags = types.ListNull(types.StringType)
+	} else {
+		tagValues := make([]attr.Value, len(vhost.Tags))
+		for i, tag := range vhost.Tags {
+			tagValues[i] = types.StringValue(tag)
+		}
+		state.Tags = types.ListValueMust(types.StringType, tagValues)
+	}
+
 	state.Id = types.StringValue(vhost.Name)
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *RabbitmqVhostResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var plan, state RabbitmqVhostResourceModel
+	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
+	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	name := plan.Name.ValueString()
+	tflog.Trace(ctx, "updating rabbitmq vhost", map[string]interface{}{
+		"name": name,
+	})
+
+	rmqc := r.providerData.rabbitmqClient
+	tags := []string{}
+	if !plan.Tags.IsNull() && !plan.Tags.IsUnknown() {
+		plan.Tags.ElementsAs(ctx, &tags, false)
+	}
+	settings := rabbithole.VhostSettings{
+		Description:      plan.Description.ValueString(),
+		DefaultQueueType: plan.DefaultQueueType.ValueString(),
+		Tracing:          plan.Tracing.ValueBool(),
+		Tags:             tags,
+	}
+	response, err := rmqc.PutVhost(name, settings)
+	if err != nil {
+		resp.Diagnostics.AddError(
+			"Error updating RabbitMQ vhost",
+			fmt.Sprintf("Could not update RabbitMQ vhost %s: %s", name, err.Error()),
+		)
+		return
+	}
+
+	if response.StatusCode != 201 && response.StatusCode != 204 {
+		resp.Diagnostics.AddError(
+			"Error updating RabbitMQ vhost",
+			fmt.Sprintf("Could not update RabbitMQ vhost %s, got status code %d", name, response.StatusCode),
+		)
+		return
+	}
+
+	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
 
 func (r *RabbitmqVhostResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {

@@ -168,7 +168,7 @@ func (r *RabbitmqExchangeResource) Create(ctx context.Context, req resource.Crea
 	arguments := make(map[string]interface{})
 	if !plan.Settings.Arguments.IsNull() {
 		for k, v := range plan.Settings.Arguments.Elements() {
-			arguments[k] = v.String()
+			arguments[k] = v.(types.String).ValueString()
 		}
 	}
 
